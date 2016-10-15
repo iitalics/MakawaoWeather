@@ -1,0 +1,33 @@
+<html>
+  <head>
+    <title>Weather Visualization</title>
+  </head>
+  <body>
+    <div style="width: 900px; margin: 0 auto;">
+      <div style="position: fixed; padding: 4px; z-index: 2;">
+        <form>
+          <input type="radio" class="modeSel" name="mode" value="rain" id="rainSel">
+          <label for="rainSel">Rainfall</label>
+          <input type="radio" class="modeSel" name="mode" value="temp" id="tempSel">
+          <label for="tempSel">Temperature</label>
+
+          <select class="monthSel">
+            <option>Jan</option>
+            <option>Feb</option>
+            <option>Mar</option>
+            <option>Apr</option>
+            <option>May</option>
+            <option>Jun</option>
+            <option>Jul</option>
+            <option>Aug</option>
+            <option>Sep</option>
+            <option selected="true">Oct</option>
+          </select>
+        </form>
+      </div>
+      <div id="vis"></div>
+    </div>
+    <script src="https://d3js.org/d3.v4.min.js" type="text/javascript"></script>
+    <script src="weather.js" type="text/javascript"></script>
+  </body>
+</html>
