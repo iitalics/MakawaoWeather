@@ -1,7 +1,7 @@
 # MakawaoWeather
 Interactive graph of weather data in upcountry Maui
 
-Preview on [jsfiddle.net](http://jsfiddle.net/qr7kr745/embedded/result,js,html/)
+Preview on [jsfiddle.net](http://jsfiddle.net/404mehfy/1/embedded/result,js,html/)
 
 ## Dependencies
   - Uses [httpserver](https://github.com/indexzero/http-server) to server pages
