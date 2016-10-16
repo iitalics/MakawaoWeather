@@ -21,6 +21,7 @@ let graphY = config => {
 /* data */
 let monthIndex, mode;
 let monthNames = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct".split(" ");
+let currentDataXY;
 
 /* hardcoded data (e.g. for jsfiddle) */
 /* retrieve data using Ajax if this is left uninitialized */
@@ -71,7 +72,9 @@ function initWeatherGraph () {
   }
 
   /* graph will be rendered here */
+  svg.append("g").classed("interact--bot", true);
   svg.append("g").classed("graph", true);
+  svg.append("g").classed("interact--top", true);
 
   /* event handlers: */
   d3.select(".monthSel").on("change", function () {
@@ -88,6 +91,23 @@ function initWeatherGraph () {
     loadSelectedGraph();
   });
 
+  {
+    let last_i = null;
+    d3.select("svg").on("mousemove", _ => {
+      let mx = d3.mouse(svg.node())[0];
+      let i = Math.round(dayX.invert(mx));
+      if (!currentDataXY) return;
+
+      i = Math.max(i, 0);
+      i = Math.min(i, currentDataXY.length-1);
+
+      if (last_i !== i) {
+        interactMove(prevConfig, currentDataXY[i], i, last_i);
+        last_i = i;
+      }
+    });
+  }
+
   /* initialize, and show */
   monthIndex = 9; // october
   mode = "rain";
@@ -95,8 +115,8 @@ function initWeatherGraph () {
 }
 
 let configs = {
-  rain: { stroke: "#15f", scale: [-0.1, 4.1], format: v => d3.format(".2")(v) + "\"" },
-  temp: { stroke: "#f40", scale: [30, 100], format: v => d3.format(".3")(v) + "\xb0F" },
+  rain: { color: "#15f", scale: [-0.1, 4.1], format: v => d3.format(".2")(v) + "\"" },
+  temp: { color: "#f40", scale: [30, 100], format: v => d3.format(".3")(v) + "\xb0F" },
 };
 
 function loadSelectedGraph () {
@@ -141,6 +161,7 @@ function initGraph (data, config) {
     doGraph(graph, data, config, barGraph);
   else
     doGraph(graph, data, config, lineGraph);
+  interactReset();
 }
 
 /* transition data: */
@@ -152,11 +173,13 @@ let EASE = d3.easeCubicInOut;
 let prevConfig = null;
 function doGraph (graph, dataY, config, api) {
   if (config !== prevConfig) {
+    /* remove old stuff */
     svg.select(".graph").selectAll("*").remove();
     prevConfig = config;
+    interactReset();
   }
 
-  let dataXY = d3.zip(d3.range(dataY.length), dataY);
+  let dataXY = currentDataXY = d3.zip(d3.range(dataY.length), dataY);
   let objs = graph.selectAll(".graphObj")
     .data(dataXY);
 
@@ -184,7 +207,7 @@ function doGraph (graph, dataY, config, api) {
       sel.append("line")
         .attr("x1", boundsX[0])
         .attr("x2", boundsX[1])
-        .attr("stroke", config.stroke)
+        .attr("stroke", config.color)
         .attr("stroke-dasharray", "2, 6");
       sel.append("text")
         .attr("fill", "#000")
@@ -225,6 +248,7 @@ function doGraph (graph, dataY, config, api) {
 }
 
 
+
 /* INTERFACE: */
 /* #api#.makeObjects(sel, config)
  *   create graph objects using selection
@@ -241,15 +265,15 @@ function doGraph (graph, dataY, config, api) {
  *   list of limits to show, e.g. highest/lowest, mean, median
  */
 
-
-
 let lineGraph = {
   /* graph object is a little circle */
   makeObjects (sel, config) {
-    sel.append("circle")
-      .attr("r", 3)
-      .attr("stroke", config.stroke)
-      .attr("fill", backColor);
+    sel.append("g")
+      .classed("pt", true)
+      .attr("stroke", config.color)
+      .attr("fill", backColor)
+      .append("circle")
+        .attr("r", 3);
   },
   moveObjects (sel, config) {
     sel.attr("transform", d =>
@@ -283,7 +307,7 @@ let lineGraph = {
     let linePath = g.append("path")
       .classed("linePath", true)
       .lower()
-      .attr("stroke", config.stroke)
+      .attr("stroke", config.color)
       .attr("fill", "none")
       .transition("graphTR")
         .duration(DURATION)
@@ -309,35 +333,42 @@ let barGraph = {
   makeObjects (sel, config) {
     sel.append("line")
       .classed("mid", true)
-      .attr("stroke", config.stroke);
-    sel.append("rect")
-      .classed("hi", true)
-      .attr("stroke", config.stroke)
+      .attr("stroke", config.color);
+
+    sel.append("g")
+      .classed("pt lo", true)
+      .attr("stroke", config.color)
       .attr("fill", backColor)
-    sel.append("rect")
-      .classed("lo", true)
-      .attr("stroke", config.stroke)
-      .attr("fill", backColor);
+      .append("rect")
+        .attr("x", -6)
+        .attr("y", -3)
+        .attr("width", 12)
+        .attr("height", 3);
+
+    sel.append("g")
+      .classed("pt hi", true)
+      .attr("stroke", config.color)
+      .attr("fill", backColor)
+      .append("rect")
+        .attr("x", -6)
+        .attr("width", 12)
+        .attr("height", 3);
   },
+
   moveObjects (sel, config) {
     /* NOTE: ~~x = Math.trunc(x)  when 'x' fits in 32 bit integer */
     let y = graphY(config);
     sel.select(".hi")
-      .attr("x", d => dayX(d[0]) - 6)
-      .attr("y", d => ~~y(d[1][0]))
-      .attr("width", 12)
-      .attr("height", 3);
+      .attr("transform", d => "translate(" + dayX(d[0]) + "," + ~~y(d[1][0]) + ")");
     sel.select(".lo")
-      .attr("x", d => dayX(d[0]) - 6)
-      .attr("y", d => ~~y(d[1][1]) - 3)
-      .attr("width", 12)
-      .attr("height", 3);
+      .attr("transform", d => "translate(" + dayX(d[0]) + "," + ~~y(d[1][1]) + ")");
     sel.select(".mid")
       .attr("x1", d => dayX(d[0]))
       .attr("x2", d => dayX(d[0]))
       .attr("y1", d => ~~y(d[1][0]))
       .attr("y2", d => ~~y(d[1][1]));
   },
+  post () { lineGraph.prevData = null; },
 
   limits: [
     { text (v, config) { return "High: " + config.format(v); },
@@ -346,6 +377,59 @@ let barGraph = {
       value (dataY) { return d3.min(dataY.map(d => d[1])); } },
   ],
 };
+
+
+
+function interactReset () {
+  d3.select(".interact--bot").selectAll("*").remove();
+  d3.select(".interact--top").selectAll("*").remove();
+}
+
+function interactMove (config, d, i, last_i) {
+  let ibot = d3.select(".interact--bot");
+  let itop = d3.select(".interact--top");
+
+  let panel = ibot.selectAll(".panel")
+    .data([true]);
+  panel = panel.enter()
+    .append("rect").classed("panel", true)
+    .attr("y", boundsY[0])
+    .attr("width", dayX(1) - dayX(0))
+    .attr("height", boundsY[1] - boundsY[0])
+    .attr("opacity", 0.1)
+    .merge(panel);
+
+  panel.interrupt("moveTR")
+    .attr("fill", config.color)
+    .attr("x", dayX(i-.5));
+
+  let ptData = d[1];
+  if (!(ptData instanceof Array)) ptData = [ptData];
+
+  let obj = d3.selectAll(".graphObj")
+    .filter((_,j) => j === i);
+
+  let labels = itop.selectAll(".label")
+    .data(ptData);
+  labels.exit().remove();
+  labels = labels.enter()
+    .append("text")
+      .classed("label", true)
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 15)
+      .attr("stroke", "none")
+      .attr("text-anchor", "middle")
+      .style("cursor", "default")
+    .merge(labels);
+
+  labels
+    .attr("fill", "#000")
+    .attr("x", dayX(i))
+    .attr("y", (d,k) => graphY(config)(d) - 6 + k*24)
+    //.style("filter", "drop-shadow(2px 2px 0px #000)")
+    .text(config.format);
+}
+
 
 
 /* go! */
