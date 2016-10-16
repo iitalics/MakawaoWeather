@@ -1,3 +1,4 @@
+"use strict";
 /* this script is used to put the JSON data and weather.js
  * in one file, so that it can be shared on sites such as jsfiddle.net */
 let fs = require("fs")

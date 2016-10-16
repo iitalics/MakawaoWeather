@@ -1,3 +1,4 @@
+"use strict";
 /* just set up web server using http-server */
 let httpserver = require("http-server");
 let colors = require("colors");
